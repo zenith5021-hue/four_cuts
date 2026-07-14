@@ -107,6 +107,14 @@
   .gesture-legend{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:14px; }
   .gesture-legend .g{ background:#fff; border:2px solid #f1eef7; border-radius:14px; padding:8px 4px; font-size:11px; font-weight:600; text-align:center; line-height:1.4; }
   .gesture-legend .g span{ display:block; font-size:20px; margin-bottom:2px; }
+  .gesture-legend .g.active{ border-color:var(--coral); background:#fff0f3; color:var(--coral-dark); }
+
+  .target-banner{
+    background:var(--coral); color:#fff; text-align:center; font-weight:700;
+    font-size:15px; padding:10px; border-radius:14px; margin-top:10px;
+  }
+  .hold-bar{ height:8px; background:rgba(255,255,255,.35); border-radius:8px; margin-top:8px; overflow:hidden; }
+  .hold-bar-fill{ height:100%; width:0%; background:#fff; transition:width .08s linear; }
 
   .shoot-row{ display:flex; gap:10px; margin-top:14px; }
   .shoot-row .btn{flex:1;}
@@ -143,15 +151,25 @@
     <div class="card">
       <h2 style="color:var(--coral); margin-top:0;">🫶 공감 네컷 사용방법</h2>
       <p><b>1. 카메라 허용</b><br>브라우저 상단에서 카메라 권한을 허용해주세요.</p>
-      <p><b>2. 손동작으로 표현</b><br>아래 동작을 카메라에 보여주면 자동으로 효과가 나타나요.</p>
+      <p><b>2. 손동작으로 표현</b><br>화면에 안내되는 순서대로 동작을 보여주면 자동으로 촬영돼요.</p>
       <ul style="padding-left:18px; line-height:1.9;">
         <li>👍 엄지척 — 응원해요</li>
         <li>✌️ 브이 — 우리반 최고</li>
         <li>🤟 아이러브유(엄지·검지·새끼) — 사랑해요</li>
         <li>✋ 손바닥 펴기 — 함께해요</li>
       </ul>
-      <p><b>3. 촬영</b><br>촬영 버튼을 누르면 3초 간격으로 총 4번 연속 촬영됩니다.</p>
-      <button class="btn btn-secondary" onclick="goTo('screen-home')" style="margin-top:10px;">확인했습니다</button>
+      <p><b>3. 촬영</b><br>동작이 인식되면 5초 카운트다운 후 촬영, 총 4번 반복됩니다.</p>
+      <div style="background:#fff7ee; border:1px solid #ffe1c2; border-radius:14px; padding:14px 16px; margin-top:14px;">
+        <p style="margin:0 0 6px; font-weight:700; color:#e0526a;">📌 인식이 잘 되려면</p>
+        <ul style="padding-left:18px; margin:0; line-height:1.8; font-size:14px;">
+          <li>밝은 곳에서 촬영하세요 (역광 X)</li>
+          <li>손과 얼굴이 화면에 크게, 뚜렷하게 나오도록 카메라에서 30~80cm 거리를 유지하세요</li>
+          <li>동작을 취한 손 하나만 화면 중앙 쪽에 크게 보여주세요 (다른 손이나 다른 사람 손은 화면 밖으로)</li>
+          <li>동작을 짧게 흔들지 말고 1~2초간 그대로 유지해주세요</li>
+          <li>인식이 안 되면 화면의 안내 배너를 눌러서 다음 단계로 넘길 수 있어요</li>
+        </ul>
+      </div>
+      <button class="btn btn-secondary" onclick="goTo('screen-home')" style="margin-top:14px;">확인했습니다</button>
     </div>
   </div>
 
@@ -161,6 +179,9 @@
       <button class="back" onclick="stopCameraAndGo('screen-home')">← 홈</button>
       <div class="counter" id="shotCounter">0 / 4</div>
     </div>
+    <p style="text-align:center; font-size:12.5px; color:#c77; margin:0 0 8px; line-height:1.5;">
+      💡 밝은 곳 · 손을 화면 중앙에 크게 · 30~80cm 거리 · 동작 1~2초 유지
+    </p>
     <div class="cam-wrap">
       <video id="video" autoplay playsinline muted></video>
       <canvas id="overlayCanvas" class="overlay-canvas"></canvas>
@@ -170,14 +191,18 @@
       <div class="flash" id="flash"></div>
     </div>
     <p class="loading-msg" id="loadingMsg">손동작 인식을 준비하고 있어요…</p>
+    <div class="target-banner" id="targetBanner" style="display:none;">
+      <div id="targetText">👍 응원해요 동작을 보여주세요</div>
+      <div class="hold-bar"><div class="hold-bar-fill" id="holdBarFill"></div></div>
+    </div>
     <div class="shots-strip" id="shotsStrip">
       <div class="slot"></div><div class="slot"></div><div class="slot"></div><div class="slot"></div>
     </div>
     <div class="gesture-legend">
-      <div class="g"><span>👍</span>응원해요</div>
-      <div class="g"><span>✌️</span>우리반최고</div>
-      <div class="g"><span>🤟</span>사랑해요</div>
-      <div class="g"><span>✋</span>함께해요</div>
+      <div class="g" id="leg-0"><span>👍</span>응원해요</div>
+      <div class="g" id="leg-1"><span>✌️</span>우리반최고</div>
+      <div class="g" id="leg-2"><span>🤟</span>사랑해요</div>
+      <div class="g" id="leg-3"><span>✋</span>함께해요</div>
     </div>
     <div class="shoot-row">
       <button class="btn btn-secondary" onclick="resetShots()">다시 찍기</button>
@@ -194,7 +219,7 @@
     <div id="resultCanvasWrap"><canvas id="finalCanvas" width="800" height="800"></canvas></div>
     <div class="result-actions">
       <button class="btn btn-secondary" onclick="retakeFromResult()">다시 찍기</button>
-      <button class="btn btn-primary" id="downloadBtn">⬇️ 저장하기</button>
+      <button class="btn btn-primary" id="downloadBtn" disabled>⏳ 사진 준비 중...</button>
     </div>
   </div>
 
@@ -203,12 +228,13 @@
 <script type="module">
 import { GestureRecognizer, FilesetResolver } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/vision_bundle.mjs";
 
-const GESTURE_MAP = {
-  "Thumb_Up":  { emoji: "👍", label: "응원해요" },
-  "Victory":   { emoji: "✌️", label: "우리반 최고" },
-  "ILoveYou":  { emoji: "🤟", label: "사랑해요" },
-  "Open_Palm": { emoji: "✋", label: "함께해요" }
-};
+const GESTURE_SEQUENCE = [
+  { name: "Thumb_Up",  emoji: "👍", label: "응원해요",   minScore: 0.75 },
+  { name: "Victory",   emoji: "✌️", label: "우리반 최고", minScore: 0.75 },
+  { name: "ILoveYou",  emoji: "🤟", label: "사랑해요",   minScore: 0.7 },
+  { name: "Open_Palm", emoji: "✋", label: "함께해요",   minScore: 0.6 }
+];
+const REQUIRED_HOLD_FRAMES = 10; // 약 0.3~0.5초 이상 안정적으로 유지해야 인식
 
 let video = document.getElementById('video');
 let overlayCanvas = document.getElementById('overlayCanvas');
@@ -218,7 +244,11 @@ let recognizing = false;
 let shots = [];
 let currentEmoji = "🫶";
 let capturing = false;
-let lastGestureAt = 0;
+
+// gesture-lock state
+let targetStep = null;
+let holdFrames = 0;
+let waitingResolve = null;
 
 async function initRecognizer(){
   try{
@@ -271,30 +301,49 @@ function recognizeLoop(){
   if(!recognizing) return;
   if(gestureRecognizer && video.readyState >= 2){
     const result = gestureRecognizer.recognizeForVideo(video, performance.now());
+    const tag = document.getElementById('gestureTag');
+    let topName = null, topScore = 0;
     if(result.gestures && result.gestures.length > 0){
       const top = result.gestures[0][0];
-      const mapped = GESTURE_MAP[top.categoryName];
-      const tag = document.getElementById('gestureTag');
-      if(mapped && top.score > 0.6){
-        const now = Date.now();
-        if(now - lastGestureAt > 900){
-          lastGestureAt = now;
-          triggerEffect(mapped.emoji, mapped.label);
-        }
+      topName = top.categoryName;
+      topScore = top.score;
+      const known = GESTURE_SEQUENCE.find(g=>g.name===topName);
+      if(known && topScore > 0.5){
         tag.style.display = 'block';
-        tag.textContent = mapped.emoji + ' ' + mapped.label;
+        tag.textContent = known.emoji + ' ' + known.label;
       } else {
         tag.style.display = 'none';
       }
     } else {
-      document.getElementById('gestureTag').style.display = 'none';
+      tag.style.display = 'none';
+    }
+
+    // gesture-lock progress (only while waiting for a specific target gesture)
+    if(targetStep){
+      if(topName === targetStep.name && topScore >= targetStep.minScore){
+        holdFrames++;
+      } else {
+        holdFrames = Math.max(0, holdFrames - 2); // 흔들리면 빠르게 감소
+      }
+      const pct = Math.min(100, Math.round((holdFrames / REQUIRED_HOLD_FRAMES) * 100));
+      const fill = document.getElementById('holdBarFill');
+      if(fill) fill.style.width = pct + '%';
+
+      if(holdFrames >= REQUIRED_HOLD_FRAMES){
+        holdFrames = 0;
+        targetStep = null;
+        if(waitingResolve){
+          const r = waitingResolve;
+          waitingResolve = null;
+          r();
+        }
+      }
     }
   }
   requestAnimationFrame(recognizeLoop);
 }
 
-function triggerEffect(emoji, label){
-  currentEmoji = emoji;
+function showEmojiPop(emoji){
   const overlay = document.getElementById('overlayEmoji');
   overlay.textContent = emoji;
   overlay.classList.remove('show');
@@ -302,10 +351,52 @@ function triggerEffect(emoji, label){
   setTimeout(()=>overlay.classList.remove('show'), 1200);
 }
 
+function waitForGesture(step, stepIndex){
+  const banner = document.getElementById('targetBanner');
+  const targetText = document.getElementById('targetText');
+  const fill = document.getElementById('holdBarFill');
+  document.querySelectorAll('.gesture-legend .g').forEach(el=>el.classList.remove('active'));
+  const legEl = document.getElementById('leg-'+stepIndex);
+  if(legEl) legEl.classList.add('active');
+
+  banner.style.display = 'block';
+  targetText.textContent = step.emoji + ' ' + step.label + ' 동작을 보여주세요 (' + (stepIndex+1) + '/4) · 안 되면 여기를 탭';
+  fill.style.width = '0%';
+  holdFrames = 0;
+  targetStep = step;
+
+  return new Promise(resolve=>{
+    let timeoutId = null;
+    function finish(){
+      if(timeoutId) clearTimeout(timeoutId);
+      banner.onclick = null;
+      targetStep = null;
+      holdFrames = 0;
+      waitingResolve = null;
+      resolve();
+    }
+    waitingResolve = finish;
+    banner.onclick = () => { finish(); }; // 인식이 안 되면 눌러서 강제로 다음 단계
+    timeoutId = setTimeout(() => { finish(); }, 15000); // 15초 넘으면 자동 진행
+  });
+}
+
 function resetShots(){
   shots = [];
   document.querySelectorAll('#shotsStrip .slot').forEach(s=>s.innerHTML='');
   document.getElementById('shotCounter').textContent = '0 / 4';
+  document.getElementById('targetBanner').style.display = 'none';
+  document.getElementById('targetBanner').onclick = null;
+  document.querySelectorAll('.gesture-legend .g').forEach(el=>el.classList.remove('active'));
+  targetStep = null;
+  holdFrames = 0;
+  if(waitingResolve){
+    const r = waitingResolve;
+    waitingResolve = null;
+    r(); // 진행 중이던 대기를 확실히 끝내서 이전 루프가 영원히 멈춰있지 않도록 함
+  }
+  capturing = false;
+  document.getElementById('shootBtn').disabled = false;
 }
 
 async function startBurst(){
@@ -313,7 +404,17 @@ async function startBurst(){
   if(shots.length >= 4){ resetShots(); }
   capturing = true;
   document.getElementById('shootBtn').disabled = true;
-  for(let i=0; i<4; i++){ await countdownAndCapture(); }
+
+  for(let i=0; i<4; i++){
+    const step = GESTURE_SEQUENCE[i];
+    await waitForGesture(step, i);          // 해당 동작을 실제로 취할 때까지 대기
+    showEmojiPop(step.emoji);
+    currentEmoji = step.emoji;
+    await countdownAndCapture();            // 5초 카운트다운 후 촬영
+  }
+
+  document.getElementById('targetBanner').style.display = 'none';
+  document.querySelectorAll('.gesture-legend .g').forEach(el=>el.classList.remove('active'));
   capturing = false;
   document.getElementById('shootBtn').disabled = false;
   buildFinalImage();
@@ -323,7 +424,7 @@ async function startBurst(){
 function countdownAndCapture(){
   return new Promise(resolve=>{
     const cd = document.getElementById('countdown');
-    let n = 3;
+    let n = 5;
     cd.textContent = n;
     cd.classList.add('show');
     const interval = setInterval(()=>{
@@ -364,10 +465,15 @@ function capturePhoto(){
 }
 
 function buildFinalImage(){
+  const downloadBtn = document.getElementById('downloadBtn');
+  downloadBtn.disabled = true;
+  downloadBtn.textContent = '⏳ 사진 준비 중...';
+  downloadBtn.onclick = null;
+
   const canvas = document.getElementById('finalCanvas');
   const ctx = canvas.getContext('2d');
   const W = canvas.width, H = canvas.height;
-  const pad = 24, gap = 16, headerH = 70, footerH = 70;
+  const pad = 24, gap = 16, headerH = 96, footerH = 70;
   const gridW = W - pad*2;
   const gridH = H - headerH - footerH - pad*2;
   const cellW = (gridW - gap) / 2;
@@ -379,7 +485,7 @@ function buildFinalImage(){
   ctx.fillStyle = '#ff6b81';
   ctx.font = 'bold 38px sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillText('🌸 공감 네컷', W/2, headerH*0.62);
+  ctx.fillText('🌸 공감 네컷', W/2, headerH*0.78);
 
   const positions = [
     [pad, headerH+pad],
@@ -410,11 +516,12 @@ function buildFinalImage(){
 
     ctx.fillStyle = '#9a94a8';
     ctx.font = '18px sans-serif';
+    ctx.textAlign = 'left';
     const dateStr = new Date().toLocaleDateString('ko-KR');
-    ctx.fillText('양구초등학교 · 우리 반 공감 순간 · ' + dateStr, W/2, H-footerH*0.55);
+    ctx.fillText('양구초등학교 · 우리 반 공감 순간 · ' + dateStr, pad, H-footerH*0.55);
+    ctx.textAlign = 'center';
 
     const mascot = new Image();
-    mascot.crossOrigin = 'anonymous';
     mascot.onload = ()=>{
       const mh = footerH*0.9;
       const mw = mh * (mascot.width/mascot.height);
@@ -426,11 +533,47 @@ function buildFinalImage(){
   }
 
   function finalizeDownload(canvas){
-    document.getElementById('downloadBtn').onclick = ()=>{
-      const a = document.createElement('a');
-      a.download = 'gonggam-necut-' + Date.now() + '.png';
-      a.href = canvas.toDataURL('image/png');
-      a.click();
+    const btn = document.getElementById('downloadBtn');
+    btn.disabled = false;
+    btn.textContent = '⬇️ 저장하기';
+    btn.onclick = ()=>{
+      let dataUrl;
+      try{
+        dataUrl = canvas.toDataURL('image/png');
+      }catch(e){
+        alert('이미지를 만드는 중 문제가 생겼어요. 다시 찍기를 눌러 다시 시도해주세요.');
+        return;
+      }
+
+      let downloadWorked = false;
+      try{
+        const a = document.createElement('a');
+        a.download = 'gonggam-necut-' + Date.now() + '.png';
+        a.href = dataUrl;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        downloadWorked = true;
+      }catch(e){
+        downloadWorked = false;
+      }
+
+      // 일부 모바일/아이패드 브라우저는 자동 다운로드가 무시되는 경우가 있어
+      // 항상 새 탭에도 열어줘서, 안 받아지면 길게 눌러 저장할 수 있게 함
+      setTimeout(()=>{
+        const win = window.open();
+        if(win){
+          win.document.write(
+            '<title>공감 네컷 저장</title>' +
+            '<body style="margin:0;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;color:#fff;">' +
+            '<p style="margin:16px;">사진이 자동으로 저장되지 않았다면,<br>아래 사진을 <b>길게 눌러 "이미지 저장"</b>을 선택해주세요.</p>' +
+            '<img src="' + dataUrl + '" style="max-width:95vw;border-radius:12px;">' +
+            '</body>'
+          );
+        } else if(!downloadWorked){
+          alert('저장이 안 되면, 화면을 길게 눌러서 사진을 저장해주세요.');
+        }
+      }, 300);
     };
   }
 
