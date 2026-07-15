@@ -562,7 +562,17 @@ function buildFinalImage(){
       }catch(e){ /* 자동 다운로드 실패해도 아래 새 탭으로 저장 가능 */ }
 
       if(win){
-        win.location.href = dataUrl; // 사진 파일 자체를 탭에 바로 열어서, 길게 눌러 저장이 확실히 되도록 함
+        win.document.open();
+        win.document.write(
+          '<!DOCTYPE html><html><head><meta charset="UTF-8">' +
+          '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+          '<title>공감 네컷 저장</title></head>' +
+          '<body style="margin:0;background:#111;font-family:sans-serif;color:#fff;text-align:center;padding:16px 0;">' +
+          '<p style="margin:0 0 14px;">사진을 <b>길게 눌러서 "이미지 저장"</b>을 선택해주세요.</p>' +
+          '<img src="' + dataUrl + '" style="max-width:94vw;border-radius:12px;display:inline-block;">' +
+          '</body></html>'
+        );
+        win.document.close();
       } else {
         alert('새 탭이 차단되었어요. 저장이 안 되면 브라우저의 팝업 차단을 해제한 뒤 다시 눌러주세요.');
       }
