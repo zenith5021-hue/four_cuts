@@ -221,6 +221,9 @@
       <button class="btn btn-secondary" onclick="retakeFromResult()">다시 찍기</button>
       <button class="btn btn-primary" id="downloadBtn" disabled>⏳ 사진 준비 중...</button>
     </div>
+    <p style="text-align:center; font-size:12.5px; color:#9a94a8; margin-top:10px; line-height:1.5;">
+      아이패드/아이폰에서는 새 탭에 사진이 열려요 — 사진을 <b>길게 눌러 "이미지 저장"</b>을 선택해주세요.
+    </p>
   </div>
 
 </div>
@@ -537,15 +540,18 @@ function buildFinalImage(){
     btn.disabled = false;
     btn.textContent = '⬇️ 저장하기';
     btn.onclick = ()=>{
+      // 팝업 차단을 피하려면 새 탭은 클릭과 동시에(비동기 작업 전에) 열어야 함
+      const win = window.open('', '_blank');
+
       let dataUrl;
       try{
         dataUrl = canvas.toDataURL('image/png');
       }catch(e){
+        if(win) win.close();
         alert('이미지를 만드는 중 문제가 생겼어요. 다시 찍기를 눌러 다시 시도해주세요.');
         return;
       }
 
-      let downloadWorked = false;
       try{
         const a = document.createElement('a');
         a.download = 'gonggam-necut-' + Date.now() + '.png';
@@ -553,27 +559,13 @@ function buildFinalImage(){
         document.body.appendChild(a);
         a.click();
         a.remove();
-        downloadWorked = true;
-      }catch(e){
-        downloadWorked = false;
-      }
+      }catch(e){ /* 자동 다운로드 실패해도 아래 새 탭으로 저장 가능 */ }
 
-      // 일부 모바일/아이패드 브라우저는 자동 다운로드가 무시되는 경우가 있어
-      // 항상 새 탭에도 열어줘서, 안 받아지면 길게 눌러 저장할 수 있게 함
-      setTimeout(()=>{
-        const win = window.open();
-        if(win){
-          win.document.write(
-            '<title>공감 네컷 저장</title>' +
-            '<body style="margin:0;background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:sans-serif;color:#fff;">' +
-            '<p style="margin:16px;">사진이 자동으로 저장되지 않았다면,<br>아래 사진을 <b>길게 눌러 "이미지 저장"</b>을 선택해주세요.</p>' +
-            '<img src="' + dataUrl + '" style="max-width:95vw;border-radius:12px;">' +
-            '</body>'
-          );
-        } else if(!downloadWorked){
-          alert('저장이 안 되면, 화면을 길게 눌러서 사진을 저장해주세요.');
-        }
-      }, 300);
+      if(win){
+        win.location.href = dataUrl; // 사진 파일 자체를 탭에 바로 열어서, 길게 눌러 저장이 확실히 되도록 함
+      } else {
+        alert('새 탭이 차단되었어요. 저장이 안 되면 브라우저의 팝업 차단을 해제한 뒤 다시 눌러주세요.');
+      }
     };
   }
 
