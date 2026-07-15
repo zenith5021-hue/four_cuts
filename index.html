@@ -557,7 +557,11 @@ function buildFinalImage(){
         a.download = 'gonggam-necut-' + Date.now() + '.png';
         a.href = dataUrl;
         document.body.appendChild(a);
-        a.click();
+        // 아이패드/아이폰에서는 이 시도가 오히려 다운로드 대화상자를 띄우고 멈춰버리는
+        // 문제가 있어 데스크톱/안드로이드에서만 자동 다운로드를 시도함
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+                      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if(!isIOS){ a.click(); }
         a.remove();
       }catch(e){ /* 자동 다운로드 실패해도 아래 새 탭으로 저장 가능 */ }
 
